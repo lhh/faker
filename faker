@@ -74,6 +74,7 @@ TMPDIR=$(mktemp -d /tmp/faker.XXXXXX)
 cd $TMPDIR
 
 # Generate tarball
+DATE=$(date +"%a %b %d %Y")
 mkdir $NAME-$VERSION
 cd $NAME-$VERSION
 cat > README <<EOT
@@ -107,7 +108,7 @@ Requires:	yum
 %doc README
 
 %changelog
-* Wed Mar 30 2016 - Lon Hohberger <lon@redhat.com> $VERSION-$RELEASE
+* $DATE - Roots <root@localhost.localdomain> $VERSION-$RELEASE
 - Initial Build
 EOT
 cd ..
