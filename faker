@@ -1,0 +1,117 @@
+#!/bin/bash
+#
+# Builds and installs a dummy rpm with the given name-version-release
+#
+shopt -s extglob
+
+CWD="$(pwd)"
+
+die() {
+    echo "$*"
+    exit 1
+}
+
+clean_exit() {
+    if [ -n "$TMPDIR" ]; then
+        cd "$(dirname $TMPDIR)"
+        rm -rf "$(basename TMPDIR)"
+    fi
+    cd "$CWD"
+    exit 0
+}
+
+package_name() {
+        FOO="$1.src.rpm"
+        echo ${FOO/-+([^-])-+([^-]).src.rpm/}
+}
+
+package_version_release() {
+        local erase
+        erase=$(package_name $1)
+        echo ${1/${erase}-/}
+}
+
+package_version() {
+        local tmp
+        tmp=$(package_version_release $1)
+        echo ${tmp/-*/}
+}
+
+package_release() {
+        local tmp
+        tmp=$(package_version_release $1)
+        echo ${tmp/*-/}
+}
+
+[ -n "$1" ] || die "Usage: $0 <n-[e:]v-r>"
+
+which rpmbuild > /dev/null || die "Please install rpmbuild"
+if [ "$(id -u)" != "0" ]; then
+    die "Please be root :("
+fi
+
+NAME=$(package_name $1)
+VERSION=$(package_version $1)
+EPOCH=${VERSION/:*}
+if [ "$EPOCH" != "$VERSION" ]; then
+    VERSION=${VERSION/*:/}
+    EPOCH="Epoch: $EPOCH"
+else
+    EPOCH=""
+fi
+RELEASE=$(package_release $1)
+
+[ -n "$NAME" ] || die "No name?"
+[ -n "$VERSION" ] || die "No version?"
+[ -n "$RELEASE" ] || die "No release?"
+
+
+TMPDIR=$(mktemp -d /tmp/faker.XXXXXX)
+cd $TMPDIR
+
+# Generate tarball
+mkdir $NAME-$VERSION
+cd $NAME-$VERSION
+cat > README <<EOT
+Dummy placeholder for $NAME-$VERSION
+EOT
+
+# Generate specfile
+cat > $NAME.spec <<EOT
+Name:		$NAME
+$EPOCH
+Version:        $VERSION
+Release:	$RELEASE
+Summary:	Hacks around TPS requirements
+BuildArch:      noarch
+
+License:	GPLv2
+Source0:	%{name}-%{version}.tar.gz
+
+Requires:	yum
+
+%description
+
+%prep
+%setup -q
+
+%build
+
+%install
+
+%files
+%doc README
+
+%changelog
+* Wed Mar 30 2016 - Lon Hohberger <lon@redhat.com> $VERSION-$RELEASE
+- Initial Build
+EOT
+cd ..
+
+tar -czvf $NAME-$VERSION.tar.gz $NAME-$VERSION
+
+rpmbuild -D '_rpmdir .' -ta $NAME-$VERSION.tar.gz
+
+rpm -ivh noarch/*rpm
+
+clean_exit
