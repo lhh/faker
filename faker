@@ -2,6 +2,10 @@
 #
 # Builds and installs a dummy rpm with the given name-version-release
 #
+# Copyright Red Hat, Inc. 2016-2019
+# Author: Lon Hohberger <lon@metamorphism.com>
+# License: Apache License, version 2.0
+#
 shopt -s extglob
 
 CWD="$(pwd)"
